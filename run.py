@@ -13,6 +13,7 @@ from options import get_options
 from train import train_epoch, validate, get_inner_model
 from reinforce_baselines import NoBaseline, ExponentialBaseline, CriticBaseline, RolloutBaseline, WarmupBaseline
 from nets.attention_model import AttentionModel
+from nets.quantum_layers import build_qnn_config
 from nets.pointer_network import PointerNetwork, CriticNetworkLSTM
 from utils import torch_load_cpu, load_problem
 
@@ -65,7 +66,9 @@ def run(opts):
         normalization=opts.normalization,
         tanh_clipping=opts.tanh_clipping,
         checkpoint_encoder=opts.checkpoint_encoder,
-        shrink_size=opts.shrink_size
+        shrink_size=opts.shrink_size,
+        project_fixed_context_backend=opts.project_fixed_context_backend,
+        project_fixed_context_qnn_config=build_qnn_config(opts),
     ).to(opts.device)
 
     if opts.use_cuda and torch.cuda.device_count() > 1:

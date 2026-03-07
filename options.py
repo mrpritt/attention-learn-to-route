@@ -27,6 +27,14 @@ def get_options(args=None):
                         help='Clip the parameters to within +- this value using tanh. '
                              'Set to 0 to not perform any clipping.')
     parser.add_argument('--normalization', default='batch', help="Normalization type, 'batch' (default) or 'instance'")
+    parser.add_argument('--project_fixed_context_backend', default='classical',
+                        choices=['classical', 'qnn'],
+                        help="Backend for project_fixed_context, default 'classical'")
+    parser.add_argument('--qnn_ansatz', default='pce', help="QNN ansatz name")
+    parser.add_argument('--qnn_qubits', type=int, default=8, help='Number of qubits for QNN layers')
+    parser.add_argument('--qnn_layers', type=int, default=4, help='Number of ansatz layers for QNN layers')
+    parser.add_argument('--qnn_rotation', default='RXRYRZ', help="Rotation pattern for QNN ansatz")
+    parser.add_argument('--qnn_topology', default='brickwall', help="Entangling topology for QNN ansatz")
 
     # Training
     parser.add_argument('--lr_model', type=float, default=1e-4, help="Set the learning rate for the actor network")

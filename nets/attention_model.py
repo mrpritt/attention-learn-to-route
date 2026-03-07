@@ -6,6 +6,7 @@ from typing import NamedTuple
 from utils.tensor_functions import compute_in_batches
 
 from nets.graph_encoder import GraphAttentionEncoder
+from nets.quantum_layers import SwitchableLinear
 from torch.nn import DataParallel
 from utils.beam_search import CachedLookup
 from utils.functions import sample_many
@@ -52,7 +53,9 @@ class AttentionModel(nn.Module):
                  normalization='batch',
                  n_heads=8,
                  checkpoint_encoder=False,
-                 shrink_size=None):
+                 shrink_size=None,
+                 project_fixed_context_backend='classical',
+                 project_fixed_context_qnn_config=None):
         super(AttentionModel, self).__init__()
 
         self.embedding_dim = embedding_dim
@@ -74,6 +77,8 @@ class AttentionModel(nn.Module):
         self.n_heads = n_heads
         self.checkpoint_encoder = checkpoint_encoder
         self.shrink_size = shrink_size
+        self.project_fixed_context_backend = project_fixed_context_backend
+        self.project_fixed_context_qnn_config = project_fixed_context_qnn_config or {}
 
         # Problem specific context parameters (placeholder and step context dimension)
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
@@ -110,7 +115,13 @@ class AttentionModel(nn.Module):
 
         # For each node we compute (glimpse key, glimpse value, logit key) so 3 * embedding_dim
         self.project_node_embeddings = nn.Linear(embedding_dim, 3 * embedding_dim, bias=False)
-        self.project_fixed_context = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.project_fixed_context = SwitchableLinear(
+            embedding_dim,
+            embedding_dim,
+            bias=False,
+            backend=project_fixed_context_backend,
+            qnn_config=self.project_fixed_context_qnn_config,
+        )
         self.project_step_context = nn.Linear(step_context_dim, embedding_dim, bias=False)
         assert embedding_dim % n_heads == 0
         # Note n_heads * val_dim == embedding_dim so input to project_out is embedding_dim
