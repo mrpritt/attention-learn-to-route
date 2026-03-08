@@ -79,6 +79,21 @@ class AttentionModel(nn.Module):
         self.shrink_size = shrink_size
         self.project_fixed_context_backend = project_fixed_context_backend
         self.project_fixed_context_qnn_config = project_fixed_context_qnn_config or {}
+        self._init_kwargs = {
+            'embedding_dim': embedding_dim,
+            'hidden_dim': hidden_dim,
+            'problem': problem,
+            'n_encode_layers': n_encode_layers,
+            'tanh_clipping': tanh_clipping,
+            'mask_inner': mask_inner,
+            'mask_logits': mask_logits,
+            'normalization': normalization,
+            'n_heads': n_heads,
+            'checkpoint_encoder': checkpoint_encoder,
+            'shrink_size': shrink_size,
+            'project_fixed_context_backend': project_fixed_context_backend,
+            'project_fixed_context_qnn_config': dict(self.project_fixed_context_qnn_config),
+        }
 
         # Problem specific context parameters (placeholder and step context dimension)
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
@@ -131,6 +146,28 @@ class AttentionModel(nn.Module):
         self.decode_type = decode_type
         if temp is not None:  # Do not change temperature if not provided
             self.temp = temp
+
+    def make_copy(self):
+        clone = self.__class__(**self._init_kwargs)
+        clone.load_state_dict(self.state_dict())
+        try:
+            device = next(self.parameters()).device
+            clone = clone.to(device)
+        except StopIteration:
+            pass
+        clone.decode_type = self.decode_type
+        clone.temp = self.temp
+        return clone
+
+    def _materialize_qnn_layers(self):
+        if hasattr(self.project_fixed_context, 'materialize'):
+            self.project_fixed_context.materialize()
+
+    def load_state_dict(self, state_dict, strict=True):
+        keys = state_dict.keys() if isinstance(state_dict, dict) else []
+        if any(key.startswith('project_fixed_context.layer.q_layer.') for key in keys):
+            self._materialize_qnn_layers()
+        return super().load_state_dict(state_dict, strict=strict)
 
     def forward(self, input, return_pi=False):
         """

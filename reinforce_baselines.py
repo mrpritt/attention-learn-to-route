@@ -150,8 +150,14 @@ class RolloutBaseline(Baseline):
 
         self._update_model(model, epoch)
 
+    def _clone_model(self, model):
+        inner_model = get_inner_model(model)
+        if hasattr(inner_model, 'make_copy'):
+            return inner_model.make_copy()
+        return copy.deepcopy(model)
+
     def _update_model(self, model, epoch, dataset=None):
-        self.model = copy.deepcopy(model)
+        self.model = self._clone_model(model)
         # Always generate baseline dataset when updating model to prevent overfitting to the baseline dataset
 
         if dataset is not None:
@@ -215,15 +221,20 @@ class RolloutBaseline(Baseline):
 
     def state_dict(self):
         return {
-            'model': self.model,
+            'model_state_dict': get_inner_model(self.model).state_dict(),
             'dataset': self.dataset,
             'epoch': self.epoch
         }
 
     def load_state_dict(self, state_dict):
         # We make it such that it works whether model was saved as data parallel or not
-        load_model = copy.deepcopy(self.model)
-        get_inner_model(load_model).load_state_dict(get_inner_model(state_dict['model']).state_dict())
+        load_model = self._clone_model(self.model)
+        if 'model_state_dict' in state_dict:
+            model_state_dict = state_dict['model_state_dict']
+        else:
+            # Backwards compatibility with checkpoints that stored the whole baseline model.
+            model_state_dict = get_inner_model(state_dict['model']).state_dict()
+        get_inner_model(load_model).load_state_dict(model_state_dict)
         self._update_model(load_model, state_dict['epoch'], state_dict['dataset'])
 
 

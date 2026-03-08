@@ -80,6 +80,9 @@ class HybridQuantumLinear(nn.Module):
             init_method={"theta": torch.nn.init.zeros_},
         )
 
+    def materialize(self):
+        self._build_layer()
+
     def _circuit(self, inputs, theta):
         for wire in range(self.n_qubits):
             self.qml.RY(inputs[..., wire], wires=wire)
@@ -124,3 +127,7 @@ class SwitchableLinear(nn.Module):
 
     def forward(self, x):
         return self.layer(x)
+
+    def materialize(self):
+        if hasattr(self.layer, "materialize"):
+            self.layer.materialize()
