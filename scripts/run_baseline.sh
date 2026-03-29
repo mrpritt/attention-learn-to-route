@@ -4,10 +4,13 @@
 # Environment overrides for qnn runs:
 #   QNN_QUBITS   default: 8
 #   QNN_LAYERS   default: 4
+# General environment overrides:
+#   N_EPOCHS     default: 100
 # Default sizes: 20 50 100
 #
 # Logs and checkpoints go to results/kool/
 # where model checkpoints land under results/kool/<problem>_<graph_size>/<run-name>/
+# and stdout/stderr logs are written alongside the corresponding run directory.
 
 set -euo pipefail
 
@@ -21,6 +24,7 @@ shift || true
 SIZES=${@:-20 50 100}
 QNN_QUBITS="${QNN_QUBITS:-8}"
 QNN_LAYERS="${QNN_LAYERS:-4}"
+N_EPOCHS="${N_EPOCHS:-100}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESULTS_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)/results/kool"
 cd "$SCRIPT_DIR"
@@ -28,13 +32,15 @@ cd "$SCRIPT_DIR"
 mkdir -p "$RESULTS_ROOT"
 
 for N in $SIZES; do
-    RUN_ID="cvrp${N}_${BACKEND}_$(date +%Y%m%dT%H%M%S)"
-    LOG="$RESULTS_ROOT/${RUN_ID}.log"
+    RUN_NAME="cvrp${N}_${BACKEND}"
+    RUNS_DIR="$RESULTS_ROOT/cvrp_${N}"
+    mkdir -p "$RUNS_DIR"
+    TMP_LOG="$(mktemp "$RESULTS_ROOT/${RUN_NAME}_XXXXXX.log")"
 
-    echo "=== Starting n=${N}, run=${RUN_ID} ===" | tee "$LOG"
-    echo "Log: $LOG"
+    echo "=== Starting n=${N}, run=${RUN_NAME} ===" | tee "$TMP_LOG"
+    echo "Temporary log: $TMP_LOG" | tee -a "$TMP_LOG"
     if [[ "$BACKEND" == "qnn" ]]; then
-        echo "QNN config: qubits=${QNN_QUBITS}, layers=${QNN_LAYERS}" | tee -a "$LOG"
+        echo "QNN config: qubits=${QNN_QUBITS}, layers=${QNN_LAYERS}" | tee -a "$TMP_LOG"
     fi
 
     python run.py \
@@ -44,9 +50,9 @@ for N in $SIZES; do
         --batch_size 128 \
         --epoch_size 12800 \
         --val_size 1000 \
-        --n_epochs 100 \
+        --n_epochs "$N_EPOCHS" \
         --output_dir "$RESULTS_ROOT" \
-        --run_name "cvrp${N}_${BACKEND}" \
+        --run_name "$RUN_NAME" \
         --no_tensorboard \
         --project_fixed_context_backend "$BACKEND" \
         $(if [[ "$BACKEND" == "qnn" ]]; then
@@ -56,7 +62,16 @@ for N in $SIZES; do
                 --qnn_rotation RXRYRZ \
                 --qnn_topology brickwall
         fi) \
-        2>&1 | tee -a "$LOG"
+        2>&1 | tee -a "$TMP_LOG"
 
-    echo "=== Finished n=${N} ===" | tee -a "$LOG"
+    RUN_DIR="$(find "$RUNS_DIR" -maxdepth 1 -mindepth 1 -type d -name "${RUN_NAME}_*" | sort | tail -n 1)"
+    if [[ -n "$RUN_DIR" ]]; then
+        FINAL_LOG="${RUN_DIR}.log"
+        mv "$TMP_LOG" "$FINAL_LOG"
+        echo "Log: $FINAL_LOG"
+    else
+        echo "Could not determine run directory under $RUNS_DIR; leaving log at $TMP_LOG" >&2
+    fi
+
+    echo "=== Finished n=${N} ===" | tee -a "${FINAL_LOG:-$TMP_LOG}"
 done
