@@ -27,7 +27,7 @@ QNN_LAYERS="${QNN_LAYERS:-4}"
 N_EPOCHS="${N_EPOCHS:-100}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-RESULTS_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)/results/kool"
+RESULTS_ROOT="$REPO_ROOT/results/kool"
 cd "$REPO_ROOT"
 
 mkdir -p "$RESULTS_ROOT"
