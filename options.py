@@ -30,6 +30,9 @@ def get_options(args=None):
     parser.add_argument('--project_fixed_context_backend', default='classical',
                         choices=['classical', 'qnn'],
                         help="Backend for project_fixed_context, default 'classical'")
+    parser.add_argument('--project_step_context_backend', default='classical',
+                        choices=['classical', 'qnn'],
+                        help="Backend for project_step_context, default 'classical'")
     parser.add_argument('--qnn_ansatz', default='pce', help="QNN ansatz name")
     parser.add_argument('--qnn_qubits', type=int, default=8, help='Number of qubits for QNN layers')
     parser.add_argument('--qnn_layers', type=int, default=4, help='Number of ansatz layers for QNN layers')

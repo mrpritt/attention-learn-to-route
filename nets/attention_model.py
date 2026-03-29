@@ -55,7 +55,9 @@ class AttentionModel(nn.Module):
                  checkpoint_encoder=False,
                  shrink_size=None,
                  project_fixed_context_backend='classical',
-                 project_fixed_context_qnn_config=None):
+                 project_fixed_context_qnn_config=None,
+                 project_step_context_backend='classical',
+                 project_step_context_qnn_config=None):
         super(AttentionModel, self).__init__()
 
         self.embedding_dim = embedding_dim
@@ -79,6 +81,8 @@ class AttentionModel(nn.Module):
         self.shrink_size = shrink_size
         self.project_fixed_context_backend = project_fixed_context_backend
         self.project_fixed_context_qnn_config = project_fixed_context_qnn_config or {}
+        self.project_step_context_backend = project_step_context_backend
+        self.project_step_context_qnn_config = project_step_context_qnn_config or {}
         self._init_kwargs = {
             'embedding_dim': embedding_dim,
             'hidden_dim': hidden_dim,
@@ -93,6 +97,8 @@ class AttentionModel(nn.Module):
             'shrink_size': shrink_size,
             'project_fixed_context_backend': project_fixed_context_backend,
             'project_fixed_context_qnn_config': dict(self.project_fixed_context_qnn_config),
+            'project_step_context_backend': project_step_context_backend,
+            'project_step_context_qnn_config': dict(self.project_step_context_qnn_config),
         }
 
         # Problem specific context parameters (placeholder and step context dimension)
@@ -137,7 +143,13 @@ class AttentionModel(nn.Module):
             backend=project_fixed_context_backend,
             qnn_config=self.project_fixed_context_qnn_config,
         )
-        self.project_step_context = nn.Linear(step_context_dim, embedding_dim, bias=False)
+        self.project_step_context = SwitchableLinear(
+            step_context_dim,
+            embedding_dim,
+            bias=False,
+            backend=project_step_context_backend,
+            qnn_config=self.project_step_context_qnn_config,
+        )
         assert embedding_dim % n_heads == 0
         # Note n_heads * val_dim == embedding_dim so input to project_out is embedding_dim
         self.project_out = nn.Linear(embedding_dim, embedding_dim, bias=False)
@@ -162,10 +174,16 @@ class AttentionModel(nn.Module):
     def _materialize_qnn_layers(self):
         if hasattr(self.project_fixed_context, 'materialize'):
             self.project_fixed_context.materialize()
+        if hasattr(self.project_step_context, 'materialize'):
+            self.project_step_context.materialize()
 
     def load_state_dict(self, state_dict, strict=True):
         keys = state_dict.keys() if isinstance(state_dict, dict) else []
-        if any(key.startswith('project_fixed_context.layer.q_layer.') for key in keys):
+        if any(
+            key.startswith('project_fixed_context.layer.q_layer.')
+            or key.startswith('project_step_context.layer.q_layer.')
+            for key in keys
+        ):
             self._materialize_qnn_layers()
         return super().load_state_dict(state_dict, strict=strict)
 

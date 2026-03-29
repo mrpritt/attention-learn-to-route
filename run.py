@@ -69,6 +69,8 @@ def run(opts):
         shrink_size=opts.shrink_size,
         project_fixed_context_backend=opts.project_fixed_context_backend,
         project_fixed_context_qnn_config=build_qnn_config(opts),
+        project_step_context_backend=opts.project_step_context_backend,
+        project_step_context_qnn_config=build_qnn_config(opts),
     ).to(opts.device)
 
     if opts.use_cuda and torch.cuda.device_count() > 1:

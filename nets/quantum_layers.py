@@ -62,7 +62,7 @@ class HybridQuantumLinear(nn.Module):
         try:
             import pennylane as qml
         except ImportError as exc:
-            raise ImportError("PennyLane is required when project_fixed_context_backend='qnn'") from exc
+            raise ImportError("PennyLane is required when a switchable linear layer uses backend='qnn'") from exc
 
         self.qml = qml
         self.ansatz = _load_ansatz(self.ansatz_name)

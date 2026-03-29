@@ -6,6 +6,7 @@
 #   QNN_LAYERS   default: 4
 # General environment overrides:
 #   N_EPOCHS     default: 100
+#   STEP_CONTEXT_BACKEND default: classical
 # Default sizes: 20 50 100
 #
 # Logs and checkpoints go to results/kool/
@@ -25,6 +26,7 @@ SIZES=${@:-20 50 100}
 QNN_QUBITS="${QNN_QUBITS:-8}"
 QNN_LAYERS="${QNN_LAYERS:-4}"
 N_EPOCHS="${N_EPOCHS:-100}"
+STEP_CONTEXT_BACKEND="${STEP_CONTEXT_BACKEND:-classical}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_ROOT="$REPO_ROOT/results/kool"
@@ -33,7 +35,11 @@ cd "$REPO_ROOT"
 mkdir -p "$RESULTS_ROOT"
 
 for N in $SIZES; do
-    RUN_NAME="cvrp${N}_${BACKEND}"
+    RUN_SUFFIX="${BACKEND}"
+    if [[ "$STEP_CONTEXT_BACKEND" != "classical" ]]; then
+        RUN_SUFFIX="${RUN_SUFFIX}_step${STEP_CONTEXT_BACKEND}"
+    fi
+    RUN_NAME="cvrp${N}_${RUN_SUFFIX}"
     RUNS_DIR="$RESULTS_ROOT/cvrp_${N}"
     mkdir -p "$RUNS_DIR"
     TMP_LOG="$(mktemp "$RESULTS_ROOT/${RUN_NAME}_XXXXXX.log")"
@@ -43,6 +49,7 @@ for N in $SIZES; do
     if [[ "$BACKEND" == "qnn" ]]; then
         echo "QNN config: qubits=${QNN_QUBITS}, layers=${QNN_LAYERS}" | tee -a "$TMP_LOG"
     fi
+    echo "Step-context backend: ${STEP_CONTEXT_BACKEND}" | tee -a "$TMP_LOG"
 
     python "$REPO_ROOT/run.py" \
         --problem cvrp \
@@ -56,6 +63,7 @@ for N in $SIZES; do
         --run_name "$RUN_NAME" \
         --no_tensorboard \
         --project_fixed_context_backend "$BACKEND" \
+        --project_step_context_backend "$STEP_CONTEXT_BACKEND" \
         $(if [[ "$BACKEND" == "qnn" ]]; then
             printf '%s ' \
                 --qnn_qubits "$QNN_QUBITS" \

@@ -122,7 +122,15 @@ def load_model(path, epoch=None):
             'n_layers': args.get('qnn_layers', 4),
             'rotation': args.get('qnn_rotation', 'RXRYRZ'),
             'topology': args.get('qnn_topology', 'brickwall'),
-        }
+        },
+        project_step_context_backend=args.get('project_step_context_backend', 'classical'),
+        project_step_context_qnn_config={
+            'ansatz_name': args.get('qnn_ansatz', 'pce'),
+            'n_qubits': args.get('qnn_qubits', 8),
+            'n_layers': args.get('qnn_layers', 4),
+            'rotation': args.get('qnn_rotation', 'RXRYRZ'),
+            'topology': args.get('qnn_topology', 'brickwall'),
+        },
     )
     # Overwrite model parameters by parameters to load
     load_data = torch_load_cpu(model_filename)
