@@ -26,8 +26,9 @@ QNN_QUBITS="${QNN_QUBITS:-8}"
 QNN_LAYERS="${QNN_LAYERS:-4}"
 N_EPOCHS="${N_EPOCHS:-100}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)/results/kool"
-cd "$SCRIPT_DIR"
+cd "$REPO_ROOT"
 
 mkdir -p "$RESULTS_ROOT"
 
@@ -43,7 +44,7 @@ for N in $SIZES; do
         echo "QNN config: qubits=${QNN_QUBITS}, layers=${QNN_LAYERS}" | tee -a "$TMP_LOG"
     fi
 
-    python run.py \
+    python "$REPO_ROOT/run.py" \
         --problem cvrp \
         --graph_size "$N" \
         --baseline rollout \
