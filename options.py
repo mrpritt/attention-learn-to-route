@@ -38,6 +38,17 @@ def get_options(args=None):
     parser.add_argument('--qnn_layers', type=int, default=4, help='Number of ansatz layers for QNN layers')
     parser.add_argument('--qnn_rotation', default='RXRYRZ', help="Rotation pattern for QNN ansatz")
     parser.add_argument('--qnn_topology', default='brickwall', help="Entangling topology for QNN ansatz")
+    parser.add_argument('--qnn_device', default='auto',
+                        choices=['auto', 'default.qubit', 'lightning.qubit'],
+                        help="Quantum device to use, default 'auto'")
+    parser.add_argument('--qnn_diff_method', default='auto',
+                        choices=['auto', 'backprop', 'adjoint'],
+                        help="Quantum differentiation method to use, default 'auto'")
+    parser.add_argument('--encoder_ff_backend', default='classical',
+                        choices=['classical', 'qnn'],
+                        help="Backend for encoder feed-forward blocks, default 'classical'")
+    parser.add_argument('--encoder_ff_qnn_layers', type=int, default=0,
+                        help='Number of final encoder layers whose feed-forward block is replaced by a QNN')
 
     # Training
     parser.add_argument('--lr_model', type=float, default=1e-4, help="Set the learning rate for the actor network")

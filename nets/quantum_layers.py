@@ -9,6 +9,8 @@ def build_qnn_config(opts):
         "n_layers": opts.qnn_layers,
         "rotation": opts.qnn_rotation,
         "topology": opts.qnn_topology,
+        "device_name": opts.qnn_device,
+        "diff_method": opts.qnn_diff_method,
     }
 
 
@@ -37,6 +39,8 @@ class HybridQuantumLinear(nn.Module):
         rotation="RXRYRZ",
         topology="brickwall",
         ansatz_name="pce",
+        device_name="auto",
+        diff_method="auto",
         bias=False,
     ):
         super().__init__()
@@ -45,6 +49,8 @@ class HybridQuantumLinear(nn.Module):
         self.rotation = rotation
         self.topology = topology
         self.ansatz_name = ansatz_name
+        self.device_name = device_name
+        self.diff_method = diff_method
         self._weight_shape = (n_layers, n_qubits, len(_parse_rot_sequence(rotation)))
 
         self.input_proj = nn.Linear(input_dim, n_qubits, bias=bias)
@@ -66,14 +72,23 @@ class HybridQuantumLinear(nn.Module):
 
         self.qml = qml
         self.ansatz = _load_ansatz(self.ansatz_name)
-        diff_method = "backprop"
-        try:
-            device = qml.device("lightning.qubit", wires=self.n_qubits)
-            diff_method = "adjoint"
-        except Exception:
-            device = qml.device("default.qubit", wires=self.n_qubits)
+        if self.device_name == "auto":
+            resolved_diff_method = "backprop"
+            try:
+                device = qml.device("lightning.qubit", wires=self.n_qubits)
+                if self.diff_method == "auto":
+                    resolved_diff_method = "adjoint"
+                else:
+                    resolved_diff_method = self.diff_method
+            except Exception:
+                device = qml.device("default.qubit", wires=self.n_qubits)
+                if self.diff_method != "auto":
+                    resolved_diff_method = self.diff_method
+        else:
+            device = qml.device(self.device_name, wires=self.n_qubits)
+            resolved_diff_method = "backprop" if self.diff_method == "auto" else self.diff_method
 
-        qnode = qml.QNode(self._circuit, device, interface="torch", diff_method=diff_method)
+        qnode = qml.QNode(self._circuit, device, interface="torch", diff_method=resolved_diff_method)
         self.q_layer = qml.qnn.TorchLayer(
             qnode,
             weight_shapes={"theta": self._weight_shape},

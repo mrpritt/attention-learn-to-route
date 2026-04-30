@@ -71,6 +71,9 @@ def run(opts):
         project_fixed_context_qnn_config=build_qnn_config(opts),
         project_step_context_backend=opts.project_step_context_backend,
         project_step_context_qnn_config=build_qnn_config(opts),
+        encoder_ff_backend=opts.encoder_ff_backend,
+        encoder_ff_qnn_layers=opts.encoder_ff_qnn_layers,
+        encoder_ff_qnn_config=build_qnn_config(opts),
     ).to(opts.device)
 
     if opts.use_cuda and torch.cuda.device_count() > 1:

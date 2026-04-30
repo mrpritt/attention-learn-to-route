@@ -3,6 +3,8 @@ import numpy as np
 from torch import nn
 import math
 
+from nets.quantum_layers import SwitchableLinear
+
 
 class SkipConnection(nn.Module):
 
@@ -159,6 +161,8 @@ class MultiHeadAttentionLayer(nn.Sequential):
             embed_dim,
             feed_forward_hidden=512,
             normalization='batch',
+            feed_forward_backend='classical',
+            feed_forward_qnn_config=None,
     ):
         super(MultiHeadAttentionLayer, self).__init__(
             SkipConnection(
@@ -170,14 +174,27 @@ class MultiHeadAttentionLayer(nn.Sequential):
             ),
             Normalization(embed_dim, normalization),
             SkipConnection(
-                nn.Sequential(
-                    nn.Linear(embed_dim, feed_forward_hidden),
-                    nn.ReLU(),
-                    nn.Linear(feed_forward_hidden, embed_dim)
-                ) if feed_forward_hidden > 0 else nn.Linear(embed_dim, embed_dim)
+                SwitchableLinear(
+                    embed_dim,
+                    embed_dim,
+                    bias=False,
+                    backend=feed_forward_backend,
+                    qnn_config=feed_forward_qnn_config,
+                ) if feed_forward_backend == 'qnn' else (
+                    nn.Sequential(
+                        nn.Linear(embed_dim, feed_forward_hidden),
+                        nn.ReLU(),
+                        nn.Linear(feed_forward_hidden, embed_dim)
+                    ) if feed_forward_hidden > 0 else nn.Linear(embed_dim, embed_dim)
+                )
             ),
             Normalization(embed_dim, normalization)
         )
+
+    def materialize_qnn_layers(self):
+        ff_module = self[2].module
+        if hasattr(ff_module, 'materialize'):
+            ff_module.materialize()
 
 
 class GraphAttentionEncoder(nn.Module):
@@ -188,17 +205,37 @@ class GraphAttentionEncoder(nn.Module):
             n_layers,
             node_dim=None,
             normalization='batch',
-            feed_forward_hidden=512
+            feed_forward_hidden=512,
+            encoder_ff_backend='classical',
+            encoder_ff_qnn_layers=0,
+            encoder_ff_qnn_config=None
     ):
         super(GraphAttentionEncoder, self).__init__()
 
         # To map input to embedding space
         self.init_embed = nn.Linear(node_dim, embed_dim) if node_dim is not None else None
 
+        encoder_ff_qnn_layers = max(0, min(n_layers, encoder_ff_qnn_layers))
         self.layers = nn.Sequential(*(
-            MultiHeadAttentionLayer(n_heads, embed_dim, feed_forward_hidden, normalization)
-            for _ in range(n_layers)
+            MultiHeadAttentionLayer(
+                n_heads,
+                embed_dim,
+                feed_forward_hidden,
+                normalization,
+                feed_forward_backend=(
+                    encoder_ff_backend
+                    if encoder_ff_backend == 'qnn' and layer_idx >= n_layers - encoder_ff_qnn_layers
+                    else 'classical'
+                ),
+                feed_forward_qnn_config=encoder_ff_qnn_config,
+            )
+            for layer_idx in range(n_layers)
         ))
+
+    def materialize_qnn_layers(self):
+        for layer in self.layers:
+            if hasattr(layer, 'materialize_qnn_layers'):
+                layer.materialize_qnn_layers()
 
     def forward(self, x, mask=None):
 

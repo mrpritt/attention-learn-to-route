@@ -57,7 +57,10 @@ class AttentionModel(nn.Module):
                  project_fixed_context_backend='classical',
                  project_fixed_context_qnn_config=None,
                  project_step_context_backend='classical',
-                 project_step_context_qnn_config=None):
+                 project_step_context_qnn_config=None,
+                 encoder_ff_backend='classical',
+                 encoder_ff_qnn_layers=0,
+                 encoder_ff_qnn_config=None):
         super(AttentionModel, self).__init__()
 
         self.embedding_dim = embedding_dim
@@ -83,6 +86,9 @@ class AttentionModel(nn.Module):
         self.project_fixed_context_qnn_config = project_fixed_context_qnn_config or {}
         self.project_step_context_backend = project_step_context_backend
         self.project_step_context_qnn_config = project_step_context_qnn_config or {}
+        self.encoder_ff_backend = encoder_ff_backend
+        self.encoder_ff_qnn_layers = encoder_ff_qnn_layers
+        self.encoder_ff_qnn_config = encoder_ff_qnn_config or {}
         self._init_kwargs = {
             'embedding_dim': embedding_dim,
             'hidden_dim': hidden_dim,
@@ -99,6 +105,9 @@ class AttentionModel(nn.Module):
             'project_fixed_context_qnn_config': dict(self.project_fixed_context_qnn_config),
             'project_step_context_backend': project_step_context_backend,
             'project_step_context_qnn_config': dict(self.project_step_context_qnn_config),
+            'encoder_ff_backend': encoder_ff_backend,
+            'encoder_ff_qnn_layers': encoder_ff_qnn_layers,
+            'encoder_ff_qnn_config': dict(self.encoder_ff_qnn_config),
         }
 
         # Problem specific context parameters (placeholder and step context dimension)
@@ -131,7 +140,10 @@ class AttentionModel(nn.Module):
             n_heads=n_heads,
             embed_dim=embedding_dim,
             n_layers=self.n_encode_layers,
-            normalization=normalization
+            normalization=normalization,
+            encoder_ff_backend=encoder_ff_backend,
+            encoder_ff_qnn_layers=encoder_ff_qnn_layers,
+            encoder_ff_qnn_config=self.encoder_ff_qnn_config,
         )
 
         # For each node we compute (glimpse key, glimpse value, logit key) so 3 * embedding_dim
@@ -172,6 +184,8 @@ class AttentionModel(nn.Module):
         return clone
 
     def _materialize_qnn_layers(self):
+        if hasattr(self.embedder, 'materialize_qnn_layers'):
+            self.embedder.materialize_qnn_layers()
         if hasattr(self.project_fixed_context, 'materialize'):
             self.project_fixed_context.materialize()
         if hasattr(self.project_step_context, 'materialize'):
@@ -180,7 +194,8 @@ class AttentionModel(nn.Module):
     def load_state_dict(self, state_dict, strict=True):
         keys = state_dict.keys() if isinstance(state_dict, dict) else []
         if any(
-            key.startswith('project_fixed_context.layer.q_layer.')
+            key.startswith('embedder.layers.') and '.module.layer.q_layer.' in key
+            or key.startswith('project_fixed_context.layer.q_layer.')
             or key.startswith('project_step_context.layer.q_layer.')
             for key in keys
         ):
