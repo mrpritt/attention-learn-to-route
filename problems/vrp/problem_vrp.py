@@ -180,6 +180,7 @@ class VRPDataset(Dataset):
 
             # From VRP with RL paper https://arxiv.org/abs/1802.04240
             CAPACITIES = {
+                5: 10.,
                 10: 20.,
                 20: 30.,
                 50: 40.,
