@@ -23,6 +23,8 @@ def get_options(args=None):
     parser.add_argument('--hidden_dim', type=int, default=128, help='Dimension of hidden layers in Enc/Dec')
     parser.add_argument('--n_encode_layers', type=int, default=3,
                         help='Number of layers in the encoder/critic network')
+    parser.add_argument('--encoder_ff_hidden', type=int, default=512,
+                        help='Hidden width of the classical encoder feed-forward block')
     parser.add_argument('--tanh_clipping', type=float, default=10.,
                         help='Clip the parameters to within +- this value using tanh. '
                              'Set to 0 to not perform any clipping.')

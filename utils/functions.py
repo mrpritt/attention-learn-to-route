@@ -116,6 +116,7 @@ def load_model(path, epoch=None):
         args['hidden_dim'],
         problem,
         n_encode_layers=args['n_encode_layers'],
+        encoder_ff_hidden=args.get('encoder_ff_hidden', 512),
         mask_inner=True,
         mask_logits=True,
         normalization=args['normalization'],
