@@ -108,5 +108,4 @@ run_qnn() {
 for n in 10 20 50 100; do
     run_classical "$n"
     run_qnn "$n" 2
-    run_qnn "$n" 4
 done
