@@ -124,12 +124,43 @@ class HybridQuantumLinear(nn.Module):
         return state
 
 
+class ClassicalBottleneckLinear(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, bias=False, activation=True):
+        super().__init__()
+        layers = [nn.Linear(input_dim, hidden_dim, bias=bias)]
+        if activation:
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(hidden_dim, output_dim, bias=bias))
+        self.layer = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.layer(x)
+
+
 class SwitchableLinear(nn.Module):
-    def __init__(self, input_dim, output_dim, bias=False, backend="classical", qnn_config=None):
+    def __init__(
+        self,
+        input_dim,
+        output_dim,
+        bias=False,
+        backend="classical",
+        qnn_config=None,
+        bottleneck_dim=None,
+    ):
         super().__init__()
         qnn_config = qnn_config or {}
         if backend == "classical":
             self.layer = nn.Linear(input_dim, output_dim, bias=bias)
+        elif backend in ("bottleneck", "bottleneck_linear"):
+            if bottleneck_dim is None or bottleneck_dim <= 0:
+                raise ValueError(f"bottleneck_dim must be positive when backend='{backend}'")
+            self.layer = ClassicalBottleneckLinear(
+                input_dim,
+                output_dim,
+                bottleneck_dim,
+                bias=bias,
+                activation=(backend == "bottleneck"),
+            )
         elif backend == "qnn":
             self.layer = HybridQuantumLinear(
                 input_dim=input_dim,

@@ -75,6 +75,10 @@ def run(opts):
         encoder_ff_backend=opts.encoder_ff_backend,
         encoder_ff_qnn_layers=opts.encoder_ff_qnn_layers,
         encoder_ff_qnn_config=build_qnn_config(opts),
+        encoder_mha_out_backend=opts.encoder_mha_out_backend,
+        encoder_mha_out_layers=opts.encoder_mha_out_layers,
+        encoder_mha_out_bottleneck_dim=opts.encoder_mha_out_bottleneck_dim,
+        encoder_mha_out_qnn_config=build_qnn_config(opts),
     ).to(opts.device)
 
     if opts.use_cuda and torch.cuda.device_count() > 1:

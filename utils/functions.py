@@ -154,6 +154,18 @@ def load_model(path, epoch=None):
             'device_name': args.get('qnn_device', 'auto'),
             'diff_method': args.get('qnn_diff_method', 'auto'),
         },
+        encoder_mha_out_backend=args.get('encoder_mha_out_backend', 'classical'),
+        encoder_mha_out_layers=args.get('encoder_mha_out_layers', 0),
+        encoder_mha_out_bottleneck_dim=args.get('encoder_mha_out_bottleneck_dim', 4),
+        encoder_mha_out_qnn_config={
+            'ansatz_name': args.get('qnn_ansatz', 'pce'),
+            'n_qubits': args.get('qnn_qubits', 8),
+            'n_layers': args.get('qnn_layers', 4),
+            'rotation': args.get('qnn_rotation', 'RXRYRZ'),
+            'topology': args.get('qnn_topology', 'brickwall'),
+            'device_name': args.get('qnn_device', 'auto'),
+            'diff_method': args.get('qnn_diff_method', 'auto'),
+        },
     )
     # Overwrite model parameters by parameters to load
     load_data = torch_load_cpu(model_filename)

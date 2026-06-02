@@ -61,7 +61,11 @@ class AttentionModel(nn.Module):
                  project_step_context_qnn_config=None,
                  encoder_ff_backend='classical',
                  encoder_ff_qnn_layers=0,
-                 encoder_ff_qnn_config=None):
+                 encoder_ff_qnn_config=None,
+                 encoder_mha_out_backend='classical',
+                 encoder_mha_out_layers=0,
+                 encoder_mha_out_bottleneck_dim=4,
+                 encoder_mha_out_qnn_config=None):
         super(AttentionModel, self).__init__()
 
         self.embedding_dim = embedding_dim
@@ -91,6 +95,10 @@ class AttentionModel(nn.Module):
         self.encoder_ff_backend = encoder_ff_backend
         self.encoder_ff_qnn_layers = encoder_ff_qnn_layers
         self.encoder_ff_qnn_config = encoder_ff_qnn_config or {}
+        self.encoder_mha_out_backend = encoder_mha_out_backend
+        self.encoder_mha_out_layers = encoder_mha_out_layers
+        self.encoder_mha_out_bottleneck_dim = encoder_mha_out_bottleneck_dim
+        self.encoder_mha_out_qnn_config = encoder_mha_out_qnn_config or {}
         self._init_kwargs = {
             'embedding_dim': embedding_dim,
             'hidden_dim': hidden_dim,
@@ -111,6 +119,10 @@ class AttentionModel(nn.Module):
             'encoder_ff_backend': encoder_ff_backend,
             'encoder_ff_qnn_layers': encoder_ff_qnn_layers,
             'encoder_ff_qnn_config': dict(self.encoder_ff_qnn_config),
+            'encoder_mha_out_backend': encoder_mha_out_backend,
+            'encoder_mha_out_layers': encoder_mha_out_layers,
+            'encoder_mha_out_bottleneck_dim': encoder_mha_out_bottleneck_dim,
+            'encoder_mha_out_qnn_config': dict(self.encoder_mha_out_qnn_config),
         }
 
         # Problem specific context parameters (placeholder and step context dimension)
@@ -148,6 +160,10 @@ class AttentionModel(nn.Module):
             encoder_ff_backend=encoder_ff_backend,
             encoder_ff_qnn_layers=encoder_ff_qnn_layers,
             encoder_ff_qnn_config=self.encoder_ff_qnn_config,
+            encoder_mha_out_backend=encoder_mha_out_backend,
+            encoder_mha_out_layers=encoder_mha_out_layers,
+            encoder_mha_out_bottleneck_dim=encoder_mha_out_bottleneck_dim,
+            encoder_mha_out_qnn_config=self.encoder_mha_out_qnn_config,
         )
 
         # For each node we compute (glimpse key, glimpse value, logit key) so 3 * embedding_dim
@@ -199,6 +215,7 @@ class AttentionModel(nn.Module):
         keys = state_dict.keys() if isinstance(state_dict, dict) else []
         if any(
             key.startswith('embedder.layers.') and '.module.layer.q_layer.' in key
+            or key.startswith('embedder.layers.') and '.module.out_proj.layer.q_layer.' in key
             or key.startswith('project_fixed_context.layer.q_layer.')
             or key.startswith('project_step_context.layer.q_layer.')
             for key in keys

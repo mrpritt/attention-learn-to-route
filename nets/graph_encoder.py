@@ -23,7 +23,10 @@ class MultiHeadAttention(nn.Module):
             input_dim,
             embed_dim,
             val_dim=None,
-            key_dim=None
+            key_dim=None,
+            out_backend='classical',
+            out_bottleneck_dim=4,
+            out_qnn_config=None
     ):
         super(MultiHeadAttention, self).__init__()
 
@@ -44,7 +47,20 @@ class MultiHeadAttention(nn.Module):
         self.W_key = nn.Parameter(torch.Tensor(n_heads, input_dim, key_dim))
         self.W_val = nn.Parameter(torch.Tensor(n_heads, input_dim, val_dim))
 
-        self.W_out = nn.Parameter(torch.Tensor(n_heads, val_dim, embed_dim))
+        self.out_backend = out_backend
+        if out_backend == 'classical':
+            self.W_out = nn.Parameter(torch.Tensor(n_heads, val_dim, embed_dim))
+            self.out_proj = None
+        else:
+            self.register_parameter('W_out', None)
+            self.out_proj = SwitchableLinear(
+                n_heads * val_dim,
+                embed_dim,
+                bias=False,
+                backend=out_backend,
+                qnn_config=out_qnn_config,
+                bottleneck_dim=out_bottleneck_dim,
+            )
 
         self.init_parameters()
 
@@ -104,10 +120,14 @@ class MultiHeadAttention(nn.Module):
 
         heads = torch.matmul(attn, V)
 
-        out = torch.mm(
-            heads.permute(1, 2, 0, 3).contiguous().view(-1, self.n_heads * self.val_dim),
-            self.W_out.view(-1, self.embed_dim)
-        ).view(batch_size, n_query, self.embed_dim)
+        heads_flat = heads.permute(1, 2, 0, 3).contiguous().view(-1, self.n_heads * self.val_dim)
+        if self.out_proj is None:
+            out = torch.mm(
+                heads_flat,
+                self.W_out.view(-1, self.embed_dim)
+            ).view(batch_size, n_query, self.embed_dim)
+        else:
+            out = self.out_proj(heads_flat).view(batch_size, n_query, self.embed_dim)
 
         # Alternative:
         # headst = heads.transpose(0, 1)  # swap the dimensions for batch and heads to align it for the matmul
@@ -163,13 +183,19 @@ class MultiHeadAttentionLayer(nn.Sequential):
             normalization='batch',
             feed_forward_backend='classical',
             feed_forward_qnn_config=None,
+            attention_out_backend='classical',
+            attention_out_bottleneck_dim=4,
+            attention_out_qnn_config=None,
     ):
         super(MultiHeadAttentionLayer, self).__init__(
             SkipConnection(
                 MultiHeadAttention(
                     n_heads,
                     input_dim=embed_dim,
-                    embed_dim=embed_dim
+                    embed_dim=embed_dim,
+                    out_backend=attention_out_backend,
+                    out_bottleneck_dim=attention_out_bottleneck_dim,
+                    out_qnn_config=attention_out_qnn_config,
                 )
             ),
             Normalization(embed_dim, normalization),
@@ -192,6 +218,9 @@ class MultiHeadAttentionLayer(nn.Sequential):
         )
 
     def materialize_qnn_layers(self):
+        attention_module = self[0].module
+        if getattr(attention_module, 'out_proj', None) is not None and hasattr(attention_module.out_proj, 'materialize'):
+            attention_module.out_proj.materialize()
         ff_module = self[2].module
         if hasattr(ff_module, 'materialize'):
             ff_module.materialize()
@@ -208,7 +237,11 @@ class GraphAttentionEncoder(nn.Module):
             feed_forward_hidden=512,
             encoder_ff_backend='classical',
             encoder_ff_qnn_layers=0,
-            encoder_ff_qnn_config=None
+            encoder_ff_qnn_config=None,
+            encoder_mha_out_backend='classical',
+            encoder_mha_out_layers=0,
+            encoder_mha_out_bottleneck_dim=4,
+            encoder_mha_out_qnn_config=None
     ):
         super(GraphAttentionEncoder, self).__init__()
 
@@ -216,6 +249,7 @@ class GraphAttentionEncoder(nn.Module):
         self.init_embed = nn.Linear(node_dim, embed_dim) if node_dim is not None else None
 
         encoder_ff_qnn_layers = max(0, min(n_layers, encoder_ff_qnn_layers))
+        encoder_mha_out_layers = max(0, min(n_layers, encoder_mha_out_layers))
         self.layers = nn.Sequential(*(
             MultiHeadAttentionLayer(
                 n_heads,
@@ -228,6 +262,13 @@ class GraphAttentionEncoder(nn.Module):
                     else 'classical'
                 ),
                 feed_forward_qnn_config=encoder_ff_qnn_config,
+                attention_out_backend=(
+                    encoder_mha_out_backend
+                    if encoder_mha_out_backend != 'classical' and layer_idx >= n_layers - encoder_mha_out_layers
+                    else 'classical'
+                ),
+                attention_out_bottleneck_dim=encoder_mha_out_bottleneck_dim,
+                attention_out_qnn_config=encoder_mha_out_qnn_config,
             )
             for layer_idx in range(n_layers)
         ))

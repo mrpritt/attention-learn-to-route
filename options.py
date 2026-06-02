@@ -51,6 +51,13 @@ def get_options(args=None):
                         help="Backend for encoder feed-forward blocks, default 'classical'")
     parser.add_argument('--encoder_ff_qnn_layers', type=int, default=0,
                         help='Number of final encoder layers whose feed-forward block is replaced by a QNN')
+    parser.add_argument('--encoder_mha_out_backend', default='classical',
+                        choices=['classical', 'bottleneck', 'bottleneck_linear', 'qnn'],
+                        help="Backend for encoder MHA output projection W_out, default 'classical'")
+    parser.add_argument('--encoder_mha_out_layers', type=int, default=0,
+                        help='Number of final encoder layers whose MHA W_out is replaced')
+    parser.add_argument('--encoder_mha_out_bottleneck_dim', type=int, default=4,
+                        help='Hidden width for bottleneck encoder MHA W_out replacement')
 
     # Training
     parser.add_argument('--lr_model', type=float, default=1e-4, help="Set the learning rate for the actor network")
