@@ -146,12 +146,17 @@ class Normalization(nn.Module):
     def __init__(self, embed_dim, normalization='batch'):
         super(Normalization, self).__init__()
 
-        normalizer_class = {
-            'batch': nn.BatchNorm1d,
-            'instance': nn.InstanceNorm1d
-        }.get(normalization, None)
+        if normalization is None or str(normalization).lower() in ('none', 'no', 'off', 'identity'):
+            self.normalizer = None
+        else:
+            normalizer_class = {
+                'batch': nn.BatchNorm1d,
+                'instance': nn.InstanceNorm1d
+            }.get(normalization, None)
+            if normalizer_class is None:
+                raise ValueError("Unknown normalization type: {}".format(normalization))
 
-        self.normalizer = normalizer_class(embed_dim, affine=True)
+            self.normalizer = normalizer_class(embed_dim, affine=True)
 
         # Normalization by default initializes affine parameters with bias 0 and weight unif(0,1) which is too large!
         # self.init_parameters()

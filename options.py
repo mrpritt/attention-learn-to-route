@@ -28,7 +28,8 @@ def get_options(args=None):
     parser.add_argument('--tanh_clipping', type=float, default=10.,
                         help='Clip the parameters to within +- this value using tanh. '
                              'Set to 0 to not perform any clipping.')
-    parser.add_argument('--normalization', default='batch', help="Normalization type, 'batch' (default) or 'instance'")
+    parser.add_argument('--normalization', default='batch',
+                        help="Normalization type, 'batch' (default), 'instance', or 'none'")
     parser.add_argument('--project_fixed_context_backend', default='classical',
                         choices=['classical', 'qnn'],
                         help="Backend for project_fixed_context, default 'classical'")
