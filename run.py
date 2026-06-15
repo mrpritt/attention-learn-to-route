@@ -68,6 +68,7 @@ def run(opts):
         tanh_clipping=opts.tanh_clipping,
         checkpoint_encoder=opts.checkpoint_encoder,
         shrink_size=opts.shrink_size,
+        vrp_time_windows=opts.vrp_time_windows,
         project_fixed_context_backend=opts.project_fixed_context_backend,
         project_fixed_context_qnn_config=build_qnn_config(opts),
         project_step_context_backend=opts.project_step_context_backend,

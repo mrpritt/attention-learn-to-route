@@ -123,6 +123,7 @@ def load_model(path, epoch=None):
         tanh_clipping=args['tanh_clipping'],
         checkpoint_encoder=args.get('checkpoint_encoder', False),
         shrink_size=args.get('shrink_size', None),
+        vrp_time_windows=args.get('vrp_time_windows', False),
         project_fixed_context_backend=args.get('project_fixed_context_backend', 'classical'),
         project_fixed_context_qnn_config={
             'ansatz_name': args.get('qnn_ansatz', 'pce'),

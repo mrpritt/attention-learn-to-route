@@ -59,6 +59,8 @@ def get_options(args=None):
                         help='Number of final encoder layers whose MHA W_out is replaced')
     parser.add_argument('--encoder_mha_out_bottleneck_dim', type=int, default=4,
                         help='Hidden width for bottleneck encoder MHA W_out replacement')
+    parser.add_argument('--vrp_time_windows', action='store_true',
+                        help='Use VRP instances with time-window features and hard time-window masking')
 
     # Training
     parser.add_argument('--lr_model', type=float, default=1e-4, help="Set the learning rate for the actor network")

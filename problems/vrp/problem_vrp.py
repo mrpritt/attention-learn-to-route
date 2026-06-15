@@ -48,11 +48,13 @@ class CVRP(object):
         d = loc_with_depot.gather(1, pi[..., None].expand(*pi.size(), loc_with_depot.size(-1)))
 
         # Length is distance (L2-norm of difference) of each next location to its prev and of first and last to depot
-        return (
+        length = (
             (d[:, 1:] - d[:, :-1]).norm(p=2, dim=2).sum(1)
             + (d[:, 0] - dataset['depot']).norm(p=2, dim=1)  # Depot to first
             + (d[:, -1] - dataset['depot']).norm(p=2, dim=1)  # Last to depot, will be 0 if depot is last
-        ), None
+        )
+
+        return length, None
 
     @staticmethod
     def make_dataset(*args, **kwargs):
@@ -152,6 +154,21 @@ class SDVRP(object):
 
 
 def make_instance(args):
+    if isinstance(args, dict):
+        result = {
+            'loc': torch.tensor(args['loc'], dtype=torch.float),
+            'demand': torch.tensor(args['demand'], dtype=torch.float) / float(args['capacity']),
+            'depot': torch.tensor(args['depot'], dtype=torch.float)
+        }
+        if 'ready' in args and 'due' in args:
+            result.update({
+                'ready': torch.tensor(args['ready'], dtype=torch.float),
+                'due': torch.tensor(args['due'], dtype=torch.float),
+                'service_time': torch.tensor(args.get('service_time', [0.0] * len(args['loc'])), dtype=torch.float),
+                'horizon': torch.tensor(float(args.get('horizon', 1.0)), dtype=torch.float),
+            })
+        return result
+
     depot, loc, demand, capacity, *args = args
     grid_size = 1
     if len(args) > 0:
@@ -187,15 +204,43 @@ class VRPDataset(Dataset):
                 100: 50.
             }
 
-            self.data = [
-                {
-                    'loc': torch.FloatTensor(size, 2).uniform_(0, 1),
+            def make_random_vrp_instance():
+                loc = torch.FloatTensor(size, 2).uniform_(0, 1)
+                depot = torch.FloatTensor(2).uniform_(0, 1)
+                demand = (torch.FloatTensor(size).uniform_(0, 9).int() + 1).float() / CAPACITIES[size]
+                instance = {
+                    'loc': loc,
                     # Uniform 1 - 9, scaled by capacities
-                    'demand': (torch.FloatTensor(size).uniform_(0, 9).int() + 1).float() / CAPACITIES[size],
-                    'depot': torch.FloatTensor(2).uniform_(0, 1)
+                    'demand': demand,
+                    'depot': depot
                 }
-                for i in range(num_samples)
-            ]
+                if distribution is not None and distribution.startswith('tw'):
+                    family = 'r2' if 'r2' in distribution.lower() else 'r1'
+                    horizon = 10.0 if family == 'r2' else 2.3
+                    service = 0.1
+                    density = 1.0
+                    d0 = (loc - depot[None, :]).norm(p=2, dim=-1)
+                    lo = d0
+                    hi = horizon - d0 - service
+                    center = lo + torch.rand(size) * (hi - lo).clamp(min=1e-6)
+                    half_width = (0.1 + torch.rand(size) * 0.9) if family == 'r2' else (0.001 + torch.rand(size) * 0.199)
+                    max_half = torch.min(center - lo, hi - center).clamp(min=1e-6)
+                    half_width = torch.min(half_width, max_half)
+                    ready = torch.clamp(center - half_width, min=0.0)
+                    due = torch.clamp(center + half_width, max=horizon)
+                    if density < 1.0:
+                        constrained = torch.rand(size) < density
+                        ready = torch.where(constrained, ready, torch.zeros_like(ready))
+                        due = torch.where(constrained, due, torch.ones_like(due))
+                    instance.update({
+                        'ready': ready,
+                        'due': due,
+                        'service_time': torch.full((size,), service),
+                        'horizon': torch.tensor(horizon)
+                    })
+                return instance
+
+            self.data = [make_random_vrp_instance() for i in range(num_samples)]
 
         self.size = len(self.data)
 

@@ -55,6 +55,7 @@ class AttentionModel(nn.Module):
                  n_heads=8,
                  checkpoint_encoder=False,
                  shrink_size=None,
+                 vrp_time_windows=False,
                  project_fixed_context_backend='classical',
                  project_fixed_context_qnn_config=None,
                  project_step_context_backend='classical',
@@ -88,6 +89,7 @@ class AttentionModel(nn.Module):
         self.n_heads = n_heads
         self.checkpoint_encoder = checkpoint_encoder
         self.shrink_size = shrink_size
+        self.vrp_time_windows = vrp_time_windows
         self.project_fixed_context_backend = project_fixed_context_backend
         self.project_fixed_context_qnn_config = project_fixed_context_qnn_config or {}
         self.project_step_context_backend = project_step_context_backend
@@ -112,6 +114,7 @@ class AttentionModel(nn.Module):
             'n_heads': n_heads,
             'checkpoint_encoder': checkpoint_encoder,
             'shrink_size': shrink_size,
+            'vrp_time_windows': vrp_time_windows,
             'project_fixed_context_backend': project_fixed_context_backend,
             'project_fixed_context_qnn_config': dict(self.project_fixed_context_qnn_config),
             'project_step_context_backend': project_step_context_backend,
@@ -128,10 +131,13 @@ class AttentionModel(nn.Module):
         # Problem specific context parameters (placeholder and step context dimension)
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
             # Embedding of last node + remaining_capacity / remaining length / remaining prize to collect
-            step_context_dim = embedding_dim + 1
+            # For VRPTW also include current route time in the decoder step context.
+            step_context_dim = embedding_dim + (2 if self.is_vrp and self.vrp_time_windows else 1)
 
             if self.is_pctsp:
                 node_dim = 4  # x, y, expected_prize, penalty
+            elif self.is_vrp and self.vrp_time_windows:
+                node_dim = 5  # x, y, demand, ready time, due time
             else:
                 node_dim = 3  # x, y, demand / prize
 
@@ -304,7 +310,7 @@ class AttentionModel(nn.Module):
 
         if self.is_vrp or self.is_orienteering or self.is_pctsp:
             if self.is_vrp:
-                features = ('demand', )
+                features = ('demand', 'ready', 'due') if self.vrp_time_windows else ('demand', )
             elif self.is_orienteering:
                 features = ('prize', )
             else:
@@ -484,28 +490,28 @@ class AttentionModel(nn.Module):
             if from_depot:
                 # 1st dimension is node idx, but we do not squeeze it since we want to insert step dimension
                 # i.e. we actually want embeddings[:, 0, :][:, None, :] which is equivalent
-                return torch.cat(
-                    (
-                        embeddings[:, 0:1, :].expand(batch_size, num_steps, embeddings.size(-1)),
-                        # used capacity is 0 after visiting depot
-                        self.problem.VEHICLE_CAPACITY - torch.zeros_like(state.used_capacity[:, :, None])
-                    ),
-                    -1
-                )
+                context = [
+                    embeddings[:, 0:1, :].expand(batch_size, num_steps, embeddings.size(-1)),
+                    # used capacity is 0 after visiting depot
+                    self.problem.VEHICLE_CAPACITY - torch.zeros_like(state.used_capacity[:, :, None])
+                ]
+                if self.vrp_time_windows:
+                    context.append(torch.zeros_like(state.current_time[:, :, None]))
+                return torch.cat(context, -1)
             else:
-                return torch.cat(
-                    (
-                        torch.gather(
-                            embeddings,
-                            1,
-                            current_node.contiguous()
-                                .view(batch_size, num_steps, 1)
-                                .expand(batch_size, num_steps, embeddings.size(-1))
-                        ).view(batch_size, num_steps, embeddings.size(-1)),
-                        self.problem.VEHICLE_CAPACITY - state.used_capacity[:, :, None]
-                    ),
-                    -1
-                )
+                context = [
+                    torch.gather(
+                        embeddings,
+                        1,
+                        current_node.contiguous()
+                            .view(batch_size, num_steps, 1)
+                            .expand(batch_size, num_steps, embeddings.size(-1))
+                    ).view(batch_size, num_steps, embeddings.size(-1)),
+                    self.problem.VEHICLE_CAPACITY - state.used_capacity[:, :, None]
+                ]
+                if self.vrp_time_windows:
+                    context.append(state.current_time[:, :, None])
+                return torch.cat(context, -1)
         elif self.is_orienteering or self.is_pctsp:
             return torch.cat(
                 (
