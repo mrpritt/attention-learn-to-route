@@ -39,3 +39,9 @@ SINTEF's TOP VRPTW pages state that the smaller Solomon benchmark instances are 
   - states that the instances contain the **50 first customers** of the 100-customer instances.
 
 Thus, to construct a 25- or 50-customer version from these files, keep the depot row plus the first 25 or 50 customer rows from the corresponding 100-customer instance.
+
+## R-family coordinate reuse
+
+In the extracted canonical files, all R-family instances (`r101`--`r112` and `r201`--`r211`) use the same 100 customer coordinates in the same order. They share depot `(35,35)`. The R1/R2 instances differ in horizon/capacity and time-window data, not in customer geography. By contrast, the C and RC families use different coordinate sets.
+
+For our purposes this is mainly a useful fact for validation. We do not attempt to exactly reproduce Solomon's canonical coordinate set in the synthetic generator; the goal is a Solomon-like VRPTW distribution for training rather than bitwise regeneration of the historical benchmark files.
