@@ -186,8 +186,18 @@ class StateCVRP(NamedTuple):
             violates_tw = (start > due) | (start + service_time + return_to_depot > horizon)
             mask_loc = mask_loc | violates_tw
 
+        feasible_loc_count = (mask_loc == 0).int().sum(-1)
+        if self.time_windows:
+            unvisited_count = (visited_loc == 0).int().sum(-1)
+            stuck_at_depot = (self.prev_a == 0) & (feasible_loc_count == 0) & (unvisited_count > 0)
+            if stuck_at_depot.any():
+                raise RuntimeError(
+                    "Infeasible CVRPTW instance/state: no unvisited customer is feasible from the depot. "
+                    "Check time-window horizon/generation parameters."
+                )
+
         # Cannot visit the depot if just visited and still unserved nodes
-        mask_depot = (self.prev_a == 0) & ((mask_loc == 0).int().sum(-1) > 0)
+        mask_depot = (self.prev_a == 0) & (feasible_loc_count > 0)
         return torch.cat((mask_depot[:, :, None], mask_loc), -1)
 
     def construct_solutions(self, actions):

@@ -216,7 +216,10 @@ class VRPDataset(Dataset):
                 }
                 if distribution is not None and distribution.startswith('tw'):
                     family = 'r2' if 'r2' in distribution.lower() else 'r1'
-                    horizon = 10.0 if family == 'r2' else 2.3
+                    # Use horizon 3.0 for R1-like random-depot unit-square data so every customer
+                    # is individually feasible as depot -> customer -> depot. The Solomon-scaled
+                    # value 2.3 can be infeasible when the depot is near a corner.
+                    horizon = 10.0 if family == 'r2' else 3.0
                     service = 0.1
                     density = 1.0
                     d0 = (loc - depot[None, :]).norm(p=2, dim=-1)
