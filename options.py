@@ -25,6 +25,8 @@ def get_options(args=None):
                         help='Number of layers in the encoder/critic network')
     parser.add_argument('--encoder_ff_hidden', type=int, default=512,
                         help='Hidden width of the classical encoder feed-forward block')
+    parser.add_argument('--encoder_ff_activation', type=str, default='relu', choices=['relu', 'silu'],
+                        help='Activation in the classical encoder feed-forward block')
     parser.add_argument('--tanh_clipping', type=float, default=10.,
                         help='Clip the parameters to within +- this value using tanh. '
                              'Set to 0 to not perform any clipping.')

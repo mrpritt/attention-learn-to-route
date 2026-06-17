@@ -186,6 +186,7 @@ class MultiHeadAttentionLayer(nn.Sequential):
             embed_dim,
             feed_forward_hidden=512,
             normalization='batch',
+            feed_forward_activation='relu',
             feed_forward_backend='classical',
             feed_forward_qnn_config=None,
             attention_out_backend='classical',
@@ -214,7 +215,7 @@ class MultiHeadAttentionLayer(nn.Sequential):
                 ) if feed_forward_backend == 'qnn' else (
                     nn.Sequential(
                         nn.Linear(embed_dim, feed_forward_hidden),
-                        nn.ReLU(),
+                        nn.SiLU() if feed_forward_activation == 'silu' else nn.ReLU(),
                         nn.Linear(feed_forward_hidden, embed_dim)
                     ) if feed_forward_hidden > 0 else nn.Linear(embed_dim, embed_dim)
                 )
@@ -240,6 +241,7 @@ class GraphAttentionEncoder(nn.Module):
             node_dim=None,
             normalization='batch',
             feed_forward_hidden=512,
+            feed_forward_activation='relu',
             encoder_ff_backend='classical',
             encoder_ff_qnn_layers=0,
             encoder_ff_qnn_config=None,
@@ -267,6 +269,7 @@ class GraphAttentionEncoder(nn.Module):
                     else 'classical'
                 ),
                 feed_forward_qnn_config=encoder_ff_qnn_config,
+                feed_forward_activation=feed_forward_activation,
                 attention_out_backend=(
                     encoder_mha_out_backend
                     if encoder_mha_out_backend != 'classical' and layer_idx >= n_layers - encoder_mha_out_layers

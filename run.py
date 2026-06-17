@@ -62,6 +62,7 @@ def run(opts):
         problem,
         n_encode_layers=opts.n_encode_layers,
         encoder_ff_hidden=opts.encoder_ff_hidden,
+        encoder_ff_activation=opts.encoder_ff_activation,
         mask_inner=True,
         mask_logits=True,
         normalization=opts.normalization,

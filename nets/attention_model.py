@@ -48,6 +48,7 @@ class AttentionModel(nn.Module):
                  problem,
                  n_encode_layers=2,
                  encoder_ff_hidden=512,
+                 encoder_ff_activation='relu',
                  tanh_clipping=10.,
                  mask_inner=True,
                  mask_logits=True,
@@ -73,6 +74,7 @@ class AttentionModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.n_encode_layers = n_encode_layers
         self.encoder_ff_hidden = encoder_ff_hidden
+        self.encoder_ff_activation = encoder_ff_activation
         self.decode_type = None
         self.temp = 1.0
         self.allow_partial = problem.NAME == 'sdvrp'
@@ -107,6 +109,7 @@ class AttentionModel(nn.Module):
             'problem': problem,
             'n_encode_layers': n_encode_layers,
             'encoder_ff_hidden': encoder_ff_hidden,
+            'encoder_ff_activation': encoder_ff_activation,
             'tanh_clipping': tanh_clipping,
             'mask_inner': mask_inner,
             'mask_logits': mask_logits,
@@ -163,6 +166,7 @@ class AttentionModel(nn.Module):
             n_layers=self.n_encode_layers,
             normalization=normalization,
             feed_forward_hidden=encoder_ff_hidden,
+            feed_forward_activation=encoder_ff_activation,
             encoder_ff_backend=encoder_ff_backend,
             encoder_ff_qnn_layers=encoder_ff_qnn_layers,
             encoder_ff_qnn_config=self.encoder_ff_qnn_config,
