@@ -40,6 +40,10 @@ SINTEF's TOP VRPTW pages state that the smaller Solomon benchmark instances are 
 
 Thus, to construct a 25- or 50-customer version from these files, keep the depot row plus the first 25 or 50 customer rows from the corresponding 100-customer instance.
 
+## Distance convention for reported values
+
+The Solomon/SINTEF objective values use one-decimal arc distances obtained by truncation, not raw Euclidean distances. For example, solving `R101.25` with raw Euclidean distances gives a route of cost about `618.33`, while recomputing the same route by truncating each arc distance to one decimal gives `617.1`, matching the reported optimum in `bkv.csv`. Use this convention when comparing solver output against the published Solomon values.
+
 ## R-family coordinate reuse
 
 In the extracted canonical files, all R-family instances (`r101`--`r112` and `r201`--`r211`) use the same 100 customer coordinates in the same order. They share depot `(35,35)`. The R1/R2 instances differ in horizon/capacity and time-window data, not in customer geography. By contrast, the C and RC families use different coordinate sets.
