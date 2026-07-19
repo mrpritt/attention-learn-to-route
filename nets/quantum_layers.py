@@ -1,6 +1,8 @@
 from torch import nn
 import torch
 
+from nets.torch_quantum import HybridTorchQuantumLinear
+
 
 def build_qnn_config(opts):
     return {
@@ -163,6 +165,13 @@ class SwitchableLinear(nn.Module):
             )
         elif backend == "qnn":
             self.layer = HybridQuantumLinear(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                bias=bias,
+                **qnn_config,
+            )
+        elif backend == "qnn_torch":
+            self.layer = HybridTorchQuantumLinear(
                 input_dim=input_dim,
                 output_dim=output_dim,
                 bias=bias,

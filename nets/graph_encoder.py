@@ -265,7 +265,7 @@ class GraphAttentionEncoder(nn.Module):
                 normalization,
                 feed_forward_backend=(
                     encoder_ff_backend
-                    if encoder_ff_backend == 'qnn' and layer_idx >= n_layers - encoder_ff_qnn_layers
+                    if encoder_ff_backend in ('qnn', 'qnn_torch') and layer_idx >= n_layers - encoder_ff_qnn_layers
                     else 'classical'
                 ),
                 feed_forward_qnn_config=encoder_ff_qnn_config,

@@ -33,10 +33,10 @@ def get_options(args=None):
     parser.add_argument('--normalization', default='batch',
                         help="Normalization type, 'batch' (default), 'instance', or 'none'")
     parser.add_argument('--project_fixed_context_backend', default='classical',
-                        choices=['classical', 'qnn'],
+                        choices=['classical', 'qnn', 'qnn_torch'],
                         help="Backend for project_fixed_context, default 'classical'")
     parser.add_argument('--project_step_context_backend', default='classical',
-                        choices=['classical', 'qnn'],
+                        choices=['classical', 'qnn', 'qnn_torch'],
                         help="Backend for project_step_context, default 'classical'")
     parser.add_argument('--qnn_ansatz', default='pce', help="QNN ansatz name")
     parser.add_argument('--qnn_qubits', type=int, default=8, help='Number of qubits for QNN layers')
@@ -50,12 +50,12 @@ def get_options(args=None):
                         choices=['auto', 'backprop', 'adjoint'],
                         help="Quantum differentiation method to use, default 'auto'")
     parser.add_argument('--encoder_ff_backend', default='classical',
-                        choices=['classical', 'qnn'],
+                        choices=['classical', 'qnn', 'qnn_torch'],
                         help="Backend for encoder feed-forward blocks, default 'classical'")
     parser.add_argument('--encoder_ff_qnn_layers', type=int, default=0,
                         help='Number of final encoder layers whose feed-forward block is replaced by a QNN')
     parser.add_argument('--encoder_mha_out_backend', default='classical',
-                        choices=['classical', 'bottleneck', 'bottleneck_linear', 'qnn'],
+                        choices=['classical', 'bottleneck', 'bottleneck_linear', 'qnn', 'qnn_torch'],
                         help="Backend for encoder MHA output projection W_out, default 'classical'")
     parser.add_argument('--encoder_mha_out_layers', type=int, default=0,
                         help='Number of final encoder layers whose MHA W_out is replaced')
