@@ -212,7 +212,7 @@ class MultiHeadAttentionLayer(nn.Sequential):
                     bias=False,
                     backend=feed_forward_backend,
                     qnn_config=feed_forward_qnn_config,
-                ) if feed_forward_backend == 'qnn' else (
+                ) if feed_forward_backend in ('qnn', 'qnn_torch') else (
                     nn.Sequential(
                         nn.Linear(embed_dim, feed_forward_hidden),
                         nn.SiLU() if feed_forward_activation == 'silu' else nn.ReLU(),
