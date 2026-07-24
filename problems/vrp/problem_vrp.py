@@ -215,26 +215,33 @@ class VRPDataset(Dataset):
                     'depot': depot
                 }
                 if distribution is not None and distribution.startswith('tw'):
-                    family = 'r2' if 'r2' in distribution.lower() else 'r1'
+                    distribution_name = distribution.lower()
+                    supported = {
+                        'tw_r1', 'tw_r1_normal', 'tw_r1_solomon', 'tw_r1_uniform',
+                        'tw_r2', 'tw_r2_normal', 'tw_r2_solomon', 'tw_r2_uniform',
+                    }
+                    if distribution_name not in supported:
+                        raise ValueError(f"Unsupported time-window distribution '{distribution_name}'")
+                    family = 'r2' if '_r2' in distribution_name else 'r1'
+                    width_distribution = 'uniform' if distribution_name.endswith('_uniform') else 'normal'
                     # Use horizon 3.0 for R1-like random-depot unit-square data so every customer
                     # is individually feasible as depot -> customer -> depot. The Solomon-scaled
                     # value 2.3 can be infeasible when the depot is near a corner.
                     horizon = 10.0 if family == 'r2' else 3.0
                     service = 0.1
-                    density = 1.0
                     d0 = (loc - depot[None, :]).norm(p=2, dim=-1)
                     lo = d0
                     hi = horizon - d0 - service
                     center = lo + torch.rand(size) * (hi - lo).clamp(min=1e-6)
-                    half_width = (0.1 + torch.rand(size) * 0.9) if family == 'r2' else (0.001 + torch.rand(size) * 0.199)
+                    if width_distribution == 'uniform':
+                        half_width = (0.1 + torch.rand(size) * 0.9) if family == 'r2' else (0.001 + torch.rand(size) * 0.199)
+                    else:
+                        mean = 0.5 if family == 'r2' else 0.1
+                        half_width = (mean + torch.randn(size) * (mean / 2)).abs().clamp(min=1e-3)
                     max_half = torch.min(center - lo, hi - center).clamp(min=1e-6)
                     half_width = torch.min(half_width, max_half)
                     ready = torch.clamp(center - half_width, min=0.0)
                     due = torch.clamp(center + half_width, max=horizon)
-                    if density < 1.0:
-                        constrained = torch.rand(size) < density
-                        ready = torch.where(constrained, ready, torch.zeros_like(ready))
-                        due = torch.where(constrained, due, torch.ones_like(due))
                     instance.update({
                         'ready': ready,
                         'due': due,
