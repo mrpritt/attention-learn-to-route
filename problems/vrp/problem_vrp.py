@@ -234,8 +234,14 @@ class VRPDataset(Dataset):
                     hi = horizon - d0 - service
                     center = lo + torch.rand(size) * (hi - lo).clamp(min=1e-6)
                     if width_distribution == 'uniform':
+                        # Original, simplified half-width generator from when hard time windows were
+                        # first added (commit 9cf977d), predating the Solomon-faithful normal version
+                        # below. Not used in the paper; kept only for the legacy tw_r1_uniform/tw_r2_uniform
+                        # aliases and to avoid silently reinterpreting older fixed benchmark files.
                         half_width = (0.1 + torch.rand(size) * 0.9) if family == 'r2' else (0.001 + torch.rand(size) * 0.199)
                     else:
+                        # Solomon's method: window half-width drawn from a folded normal distribution.
+                        # This is what plain tw_r1/tw_r2 alias to, and what we use in the paper.
                         mean = 0.5 if family == 'r2' else 0.1
                         half_width = (mean + torch.randn(size) * (mean / 2)).abs().clamp(min=1e-3)
                     max_half = torch.min(center - lo, hi - center).clamp(min=1e-6)
