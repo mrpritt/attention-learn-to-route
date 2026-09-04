@@ -198,6 +198,7 @@ def launch_stage(repo, name, command, log_path, events):
 def main():
     options = parse_options()
     repo = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo))
     campaign_dir = repo / "results" / "batteries" / options.campaign
     chains = campaign_chains()
     if len(chains) != 20:
