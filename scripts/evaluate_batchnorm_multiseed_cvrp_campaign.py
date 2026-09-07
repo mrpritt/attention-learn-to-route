@@ -17,7 +17,8 @@ BACKENDS = ("qnn", "classical")
 def parse_options():
     parser = argparse.ArgumentParser(description="Evaluate the matched five-seed BatchNorm CVRP campaign on fixed held-out sets.")
     parser.add_argument("--campaign", default="batchnorm_multiseed_cvrp_single_fixedval")
-    parser.add_argument("--output", default="batchnorm_multiseed_cvrp_single_fixedtest")
+    parser.add_argument("--output", default="batchnorm_multiseed_cvrp_single_fixedtest_s1234")
+    parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -102,7 +103,7 @@ def main():
                 str(repo / ".venv" / "bin" / "python"), "eval.py", str(dataset),
                 "--model", str(checkpoint), "--decode_strategy", decode_strategy,
                 "--width", str(width), "--val_size", "1000", "--eval_batch_size", str(eval_batch_size),
-                "--max_calc_batch_size", "10000", "--no_progress_bar", "-o", str(artifact),
+                "--max_calc_batch_size", "10000", "--seed", str(options.seed), "--no_progress_bar", "-o", str(artifact),
             ]
             if options.dry_run:
                 print(shlex.join(command))
@@ -122,6 +123,7 @@ def main():
                 "training_seed": training_seed,
                 "backend": backend,
                 "graph_size": graph_size,
+                "decoding_seed": options.seed,
                 "decode_strategy": decode_strategy,
                 "width": width,
                 "checkpoint": str(checkpoint.resolve()),

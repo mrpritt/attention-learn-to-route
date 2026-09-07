@@ -1,4 +1,5 @@
 import math
+import random
 import torch
 import os
 import argparse
@@ -203,8 +204,12 @@ if __name__ == "__main__":
     parser.add_argument('--results_dir', default='results', help="Name of results directory")
     parser.add_argument('--multiprocessing', action='store_true',
                         help='Use multiprocessing to parallelize over multiple GPUs')
+    parser.add_argument('--seed', type=int, default=1234, help='Random seed for reproducible decoding')
 
     opts = parser.parse_args()
+    random.seed(opts.seed)
+    np.random.seed(opts.seed)
+    torch.manual_seed(opts.seed)
 
     assert opts.o is None or (len(opts.datasets) == 1 and len(opts.width) <= 1), \
         "Cannot specify result filename with more than one dataset or more than one width"
